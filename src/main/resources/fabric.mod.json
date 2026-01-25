@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "bookwriter",
+  "version": "${version}",
+  "name": "Book Writer",
+  "description": "Adds a paste button to the book editing screen that automatically formats text across multiple pages.",
+  "authors": ["Jack"],
+  "contact": {},
+  "license": "MIT",
+  "icon": "assets/bookwriter/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["com.bookwriter.BookWriterMod"]
+  },
+  "mixins": ["bookwriter.mixins.json"],
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "minecraft": "~1.21.7",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}

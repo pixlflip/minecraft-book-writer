@@ -1,0 +1,9 @@
+{
+  "required": true,
+  "package": "com.bookwriter.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": ["BookEditScreenMixin"],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
