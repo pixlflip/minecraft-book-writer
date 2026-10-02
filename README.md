@@ -6,6 +6,26 @@ A **client-side Fabric mod for Minecraft Java Edition 1.21.7** that imports clip
 
 Requires Java 21, Fabric Loader 0.16.14 or later, and Fabric API for Minecraft 1.21.7. Put the built `bookwriter-1.1.0.jar` and Fabric API in your client's `mods` folder. Do not install this client-only mod on a dedicated server. Other Minecraft versions have not been verified.
 
+## GitHub Releases
+
+Download the installable JAR from [Releases](https://github.com/pixlflip/minecraftbookwriter/releases). Release assets include the mod JAR and `SHA256SUMS`; GitHub's automatic Source code downloads are not installable mods. This repository is private, so downloads require repository access.
+
+Maintainers publish by tagging a tested source commit:
+
+```sh
+# After merging and completing the in-game release checklist:
+git tag v1.1.0
+git push origin v1.1.0
+
+# Optional preview while a PR is still under review:
+git tag v1.1.0-rc.1
+git push origin v1.1.0-rc.1
+```
+
+The version must match `mod_version` in `gradle.properties`; supported tags are `vVERSION` and `vVERSION-rc.N`. Release-candidate tags are marked **prerelease** and do not become Latest. Their JAR retains the base `mod_version` (for example, `bookwriter-1.1.0.jar`). Stable tags must point to a commit already merged into `main`.
+
+The tag workflow runs all tests, builds once, validates the packaged version, generates a checksum, attaches the installable JAR to a draft release, then publishes it. Branch and PR builds cannot publish releases. Existing releases are not overwritten: if publication fails with a draft left behind, inspect the draft and complete it or remove that draft before rerunning the failed release job. Do not move published version tags; increment the version instead.
+
 ## Use
 
 1. Copy plain text, then open a **book and quill**.
@@ -44,7 +64,7 @@ For an interactive development client:
 ./gradlew runClient
 ```
 
-The Gradle wrapper is checksum-pinned and Fabric Loom uses a stable pinned release. JUnit tests cover pagination boundaries, page/character limits, Unicode, overflow, and undo snapshots. GitHub Actions builds the mod and uploads the distributable JAR and test reports for each push/PR.
+The Gradle wrapper is checksum-pinned and Fabric Loom uses a stable pinned release. JUnit tests cover pagination boundaries, page/character limits, Unicode, overflow, and undo snapshots. GitHub Actions builds the mod and uploads the distributable JAR and test reports for each push/PR; version-tag pushes also publish GitHub Releases. Release-packaging safeguard tests run with `python3 -m unittest discover -s tests -v`.
 
 ### In-game release checklist
 

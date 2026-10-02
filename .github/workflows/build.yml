@@ -1,4 +1,4 @@
-name: Build and test
+name: Build, test, and release
 
 on:
   push:
@@ -18,6 +18,8 @@ jobs:
           distribution: temurin
           java-version: '21'
       - uses: gradle/actions/setup-gradle@v4
+      - name: Test release packaging safeguards
+        run: python3 -m unittest discover -s tests -v
       - name: Build and run regression tests
         run: ./gradlew --no-daemon clean test build
       - name: Upload installable mod
@@ -35,3 +37,52 @@ jobs:
           name: test-reports
           path: build/reports/tests/test/
           if-no-files-found: warn
+
+  release:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: release-${{ github.ref }}
+      cancel-in-progress: false
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      RELEASE_TAG: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          name: bookwriter
+          path: dist
+      - name: Validate tagged artifact and prepare checksum/notes
+        id: package
+        env:
+          SOURCE_COMMIT: ${{ github.sha }}
+        run: python3 scripts/prepare_release.py --tag "$RELEASE_TAG" --commit "$SOURCE_COMMIT" --dist dist --output "$GITHUB_OUTPUT"
+      - name: Require stable release source to be merged into main
+        if: steps.package.outputs.prerelease == 'false'
+        run: git merge-base --is-ancestor HEAD origin/main
+      - name: Create draft and attach installable JAR
+        env:
+          JAR_NAME: ${{ steps.package.outputs.jar_name }}
+          PRERELEASE: ${{ steps.package.outputs.prerelease }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          flags=(--draft --verify-tag --latest=false --title "Book Writer $RELEASE_TAG" --notes-file dist/release-notes.md)
+          if [[ "$PRERELEASE" == "true" ]]; then flags+=(--prerelease); fi
+          gh release create "$RELEASE_TAG" "dist/$JAR_NAME" dist/SHA256SUMS "${flags[@]}"
+      - name: Publish completed release
+        env:
+          PRERELEASE: ${{ steps.package.outputs.prerelease }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          latest=true
+          if [[ "$PRERELEASE" == "true" ]]; then latest=false; fi
+          gh release edit "$RELEASE_TAG" --draft=false --latest="$latest"
