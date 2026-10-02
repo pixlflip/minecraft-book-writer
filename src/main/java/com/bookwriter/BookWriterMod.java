@@ -10,6 +10,6 @@ public class BookWriterMod implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
-        LOGGER.info("Book Writer mod initialized - paste button added to book editing screen");
+        LOGGER.info("Book Writer initialized - safe clipboard imports enabled");
     }
 }

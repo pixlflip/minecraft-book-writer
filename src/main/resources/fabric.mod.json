@@ -3,11 +3,10 @@
   "id": "bookwriter",
   "version": "${version}",
   "name": "Book Writer",
-  "description": "Adds a paste button to the book editing screen that automatically formats text across multiple pages.",
+  "description": "Safely import clipboard text into books with font-aware pagination, Replace, Append, and Undo.",
   "authors": ["Jack"],
   "contact": {},
   "license": "MIT",
-  "icon": "assets/bookwriter/icon.png",
   "environment": "client",
   "entrypoints": {
     "client": ["com.bookwriter.BookWriterMod"]

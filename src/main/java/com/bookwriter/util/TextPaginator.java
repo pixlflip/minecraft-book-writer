@@ -1,178 +1,143 @@
 package com.bookwriter.util;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.font.TextRenderer;
-
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.function.ToIntFunction;
 
-/**
- * Utility class for splitting large text into pages suitable for Minecraft books.
- * Uses the game's TextRenderer to accurately calculate pixel widths for proper line wrapping.
- */
-public class TextPaginator {
-    // Minecraft book visual limits
+/** Font-aware pagination, independent of the Minecraft runtime for regression testing. */
+public final class TextPaginator {
     public static final int MAX_LINE_WIDTH_PIXELS = 114;
     public static final int MAX_LINES_PER_PAGE = 14;
+    public static final int MAX_CHARS_PER_PAGE = 1024;
     public static final int MAX_PAGES = 100;
+    public static final int MAX_INPUT_CHARS = 1_000_000;
 
-    /**
-     * Splits the input text into pages, respecting pixel width and line limits.
-     *
-     * @param text The text to paginate
-     * @return A list of strings, each representing one page of content
-     */
-    public static List<String> paginate(String text) {
-        List<String> pages = new ArrayList<>();
+    private TextPaginator() {}
 
+    /** Overflow is explicit; callers must not silently apply a partial result. */
+    public record Result(List<String> pages, boolean overflow) {
+        public Result {
+            pages = List.copyOf(pages);
+        }
+    }
+
+    public static Result paginate(String text, ToIntFunction<String> width, int pageLimit) {
+        Objects.requireNonNull(width, "width");
+        if (pageLimit < 0 || pageLimit > MAX_PAGES) {
+            throw new IllegalArgumentException("Page limit must be between 0 and 100");
+        }
         if (text == null || text.isEmpty()) {
-            pages.add("");
-            return pages;
+            return new Result(pageLimit == 0 ? List.of() : List.of(""), false);
         }
-
-        // Normalize line endings
-        text = text.replace("\r\n", "\n").replace("\r", "\n");
-
-        TextRenderer textRenderer = MinecraftClient.getInstance().textRenderer;
-
-        // Use a state holder class to work around lambda limitations
-        PaginationState state = new PaginationState();
-
-        String[] tokens = splitIntoTokens(text);
-
-        for (String token : tokens) {
-            if (token.equals("\n")) {
-                // Explicit newline - commit current line and start new one
-                commitLine(state, pages);
-            } else if (token.trim().isEmpty() && token.contains(" ")) {
-                // Whitespace token
-                String testLine = state.currentLine.toString() + token;
-                if (textRenderer.getWidth(testLine) <= MAX_LINE_WIDTH_PIXELS) {
-                    state.currentLine.append(token);
-                }
-                // If whitespace doesn't fit, we just skip it (natural word wrap point)
+        if (text.length() > MAX_INPUT_CHARS) {
+            throw new IllegalArgumentException("Input exceeds the clipboard safety limit");
+        }
+        text = text.replace("\r\n", "\n").replace('\r', '\n');
+        State state = new State(width, pageLimit);
+        for (int start = 0; start < text.length() && !state.overflow;) {
+            int cp = text.codePointAt(start);
+            if (cp == '\n') {
+                state.commitLine(false);
+                start++;
+            } else if (Character.isWhitespace(cp)) {
+                state.addSpace(new String(Character.toChars(cp)));
+                start += Character.charCount(cp);
             } else {
-                // Regular word token
-                addWord(token, state, pages, textRenderer);
-            }
-
-            if (pages.size() >= MAX_PAGES) {
-                return pages;
-            }
-        }
-
-        // Don't forget the last line and page
-        if (state.currentLine.length() > 0) {
-            state.currentPage.append(state.currentLine);
-        }
-        if (state.currentPage.length() > 0) {
-            pages.add(state.currentPage.toString());
-        }
-
-        // Ensure at least one page exists
-        if (pages.isEmpty()) {
-            pages.add("");
-        }
-
-        return pages;
-    }
-
-    private static void addWord(String word, PaginationState state, List<String> pages, TextRenderer textRenderer) {
-        String testLine = state.currentLine.toString() + word;
-
-        if (textRenderer.getWidth(testLine) <= MAX_LINE_WIDTH_PIXELS) {
-            // Word fits on current line
-            state.currentLine.append(word);
-        } else {
-            // Word doesn't fit - need to wrap
-            // First commit current line if it has content
-            if (state.currentLine.length() > 0) {
-                commitLine(state, pages);
-                if (pages.size() >= MAX_PAGES) return;
-            }
-
-            // Now try to add the word to the new empty line
-            if (textRenderer.getWidth(word) <= MAX_LINE_WIDTH_PIXELS) {
-                // Word fits on a fresh line
-                state.currentLine.append(word);
-            } else {
-                // Word is too long even for an empty line - break it character by character
-                for (char c : word.toCharArray()) {
-                    String test = state.currentLine.toString() + c;
-                    if (textRenderer.getWidth(test) > MAX_LINE_WIDTH_PIXELS) {
-                        commitLine(state, pages);
-                        if (pages.size() >= MAX_PAGES) return;
-                    }
-                    state.currentLine.append(c);
+                int end = start + Character.charCount(cp);
+                while (end < text.length() && !Character.isWhitespace(text.codePointAt(end))) {
+                    end += Character.charCount(text.codePointAt(end));
                 }
+                state.addWord(text.substring(start, end));
+                start = end;
             }
         }
+        if (!state.overflow) {
+            // The last line, including a deliberate trailing blank line, uses the same limits.
+            state.commitLine(false);
+            state.flushPage();
+        }
+        return new Result(state.pages, state.overflow);
     }
 
-    private static void commitLine(PaginationState state, List<String> pages) {
-        if (state.currentLineCount >= MAX_LINES_PER_PAGE) {
-            // Page is full, start new page
-            pages.add(state.currentPage.toString());
-            state.currentPage = new StringBuilder();
-            state.currentLineCount = 0;
+    private static final class State {
+        private final ToIntFunction<String> width;
+        private final int pageLimit;
+        private final List<String> pages = new ArrayList<>();
+        private final List<String> lines = new ArrayList<>();
+        private final StringBuilder line = new StringBuilder();
+        private int pageChars;
+        private boolean overflow;
+
+        private State(ToIntFunction<String> width, int pageLimit) {
+            this.width = width;
+            this.pageLimit = pageLimit;
         }
 
-        state.currentPage.append(state.currentLine);
-        state.currentPage.append("\n");
-        state.currentLineCount++;
-        state.currentLine = new StringBuilder();
-    }
+        private boolean fits(String value) {
+            return value.length() <= MAX_CHARS_PER_PAGE && width.applyAsInt(value) <= MAX_LINE_WIDTH_PIXELS;
+        }
 
-    /**
-     * State holder for pagination to avoid lambda capture issues
-     */
-    private static class PaginationState {
-        StringBuilder currentPage = new StringBuilder();
-        StringBuilder currentLine = new StringBuilder();
-        int currentLineCount = 0;
-    }
-
-    /**
-     * Splits text into tokens: words, whitespace runs, and newlines.
-     */
-    private static String[] splitIntoTokens(String text) {
-        List<String> tokens = new ArrayList<>();
-        StringBuilder current = new StringBuilder();
-        boolean inWhitespace = false;
-
-        for (int i = 0; i < text.length(); i++) {
-            char c = text.charAt(i);
-
-            // Treat newlines as their own tokens
-            if (c == '\n') {
-                if (current.length() > 0) {
-                    tokens.add(current.toString());
-                    current = new StringBuilder();
-                }
-                tokens.add("\n");
-                inWhitespace = false;
-                continue;
-            }
-
-            boolean isWhitespace = Character.isWhitespace(c);
-
-            if (current.length() == 0) {
-                inWhitespace = isWhitespace;
-                current.append(c);
-            } else if (isWhitespace == inWhitespace) {
-                current.append(c);
+        private void addSpace(String space) {
+            if (fits(line + space)) {
+                line.append(space);
             } else {
-                tokens.add(current.toString());
-                current = new StringBuilder();
-                current.append(c);
-                inWhitespace = isWhitespace;
+                // Commit the word before dropping a separator at a natural wrap point.
+                commitLine(true);
             }
         }
 
-        if (current.length() > 0) {
-            tokens.add(current.toString());
+        private void addWord(String word) {
+            if (fits(line + word)) {
+                line.append(word);
+                return;
+            }
+            if (!line.isEmpty()) {
+                commitLine(true);
+            }
+            if (overflow) return;
+            if (fits(word)) {
+                line.append(word);
+                return;
+            }
+            // Never split a supplementary Unicode character between lines or pages.
+            for (int offset = 0; offset < word.length() && !overflow;) {
+                int cp = word.codePointAt(offset);
+                String character = new String(Character.toChars(cp));
+                if (!fits(character)) {
+                    throw new IllegalArgumentException("A glyph is wider than a book line");
+                }
+                if (!fits(line + character)) {
+                    commitLine(true);
+                }
+                if (!overflow) line.append(character);
+                offset += Character.charCount(cp);
+            }
         }
 
-        return tokens.toArray(new String[0]);
+        private void commitLine(boolean wrapped) {
+            if (overflow) return;
+            String value = wrapped ? line.toString().stripTrailing() : line.toString();
+            int addedChars = value.length() + (lines.isEmpty() ? 0 : 1);
+            if (lines.size() == MAX_LINES_PER_PAGE || pageChars + addedChars > MAX_CHARS_PER_PAGE) {
+                flushPage();
+                addedChars = value.length();
+            }
+            if (pages.size() >= pageLimit) {
+                overflow = true;
+                return;
+            }
+            lines.add(value);
+            pageChars += addedChars;
+            line.setLength(0);
+        }
+
+        private void flushPage() {
+            if (!lines.isEmpty()) {
+                pages.add(String.join("\n", lines));
+                lines.clear();
+                pageChars = 0;
+            }
+        }
     }
 }

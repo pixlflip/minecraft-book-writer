@@ -1,0 +1,20 @@
+{
+  "bookwriter.notice.title": "Book Writer",
+  "bookwriter.replace": "Replace",
+  "bookwriter.append": "Append",
+  "bookwriter.undo": "Undo",
+  "bookwriter.import": "Import",
+  "bookwriter.replace.tooltip": "Replace this book with clipboard text. Confirmation required.",
+  "bookwriter.append.tooltip": "Add clipboard text on new pages, preserving existing text.",
+  "bookwriter.undo.tooltip": "Restore the book to before the last import in this editing session.",
+  "bookwriter.confirm.title": "Import clipboard text?",
+  "bookwriter.confirm.replace": "Replace all %s existing page(s) with %s imported page(s)? You can undo while this book editor remains open. Click Done to save afterward.",
+  "bookwriter.confirm.append": "Append %s page(s), for %s total? Existing text stays unchanged. Click Done to save afterward.",
+  "bookwriter.confirm.undo": "Restore the book to before the last import? This also discards any manual edits made since that import.",
+  "bookwriter.empty": "Book Writer: the clipboard contains no text to import.",
+  "bookwriter.too_large": "Book Writer: the clipboard exceeds the %s-character safety limit. Nothing was changed.",
+  "bookwriter.cannot_paginate": "Book Writer: this text could not be fitted to the current font. Nothing was changed.",
+  "bookwriter.overflow": "Book Writer: this text does not fit in the %s available page(s). Nothing was changed. Shorten the text or split it between books.",
+  "bookwriter.imported": "Book Writer: imported %s page(s), %s total. Click Done to save, or Undo to restore the previous text.",
+  "bookwriter.restored": "Book Writer: previous pages restored. Click Done to save."
+}
