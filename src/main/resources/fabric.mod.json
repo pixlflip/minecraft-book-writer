@@ -3,7 +3,7 @@
   "id": "bookwriter",
   "version": "${version}",
   "name": "Book Writer",
-  "description": "Adds a paste button to the book editing screen that automatically formats text across multiple pages.",
+  "description": "Import long text into a book and quill: paste from the clipboard or from a web link, with a preview, automatic page breaks, undo and continue-in-next-book.",
   "authors": ["Jack"],
   "contact": {},
   "license": "MIT",
