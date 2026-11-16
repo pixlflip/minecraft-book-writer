@@ -64,7 +64,6 @@ jobs:
           fi
       - name: Smoke test in the real game (Minecraft ${{ matrix.mc }})
         run: |
-          sudo apt-get update -qq && sudo apt-get install -y -qq xvfb mesa-utils libgl1-mesa-dri > /dev/null
           # Software OpenGL on a virtual display. A run that never reaches the title screen
           # (window creation failed) is retried once.
           export LIBGL_ALWAYS_SOFTWARE=1
