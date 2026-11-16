@@ -44,13 +44,36 @@ public class SmokeTest implements ClientModInitializer {
             });
             pause();
 
-            // Create a world through the normal Create New World screen.
-            onClient(client, () -> openCreateWorld(client));
-            // It loads the default data packs first, then appears.
-            waitFor("the create world screen", () -> client.currentScreen instanceof CreateWorldScreen ? Boolean.TRUE : null);
-            pause();
-            onClient(client, () -> press(button(client.currentScreen, "selectWorld.create")));
-            waitFor("the world to load", () -> client.player != null && client.world != null && client.currentScreen == null ? Boolean.TRUE : null);
+            // Create a world through the normal Create New World screen. The title screen can
+            // still replace it while the game settles after loading, so retry until it sticks.
+            boolean[] created = new boolean[1];
+            for (int attempt = 0; attempt < 5 && !created[0]; attempt++) {
+                onClient(client, () -> openCreateWorld(client));
+                waitFor("the create world screen", () -> client.currentScreen instanceof CreateWorldScreen ? Boolean.TRUE : null);
+                pause();
+                onClient(client, () -> {
+                    if (client.currentScreen instanceof CreateWorldScreen) {
+                        press(button(client.currentScreen, "selectWorld.create"));
+                        created[0] = true;
+                    }
+                });
+            }
+            check(created[0], "could not create a world");
+            // Some versions ask for confirmation first (experimental features, for example): accept it.
+            waitFor("the world to load", () -> {
+                if (client.player != null && client.world != null && client.currentScreen == null) {
+                    return Boolean.TRUE;
+                }
+                Screen screen = client.currentScreen;
+                if (screen != null && screen.children().stream().anyMatch(e -> key(e).equals("gui.yes"))) {
+                    client.execute(() -> {
+                        if (client.currentScreen == screen) {
+                            press(button(screen, "gui.yes"));
+                        }
+                    });
+                }
+                return null;
+            });
             pause();
 
             // A book and quill in every hotbar slot, given by the server so it is really there.
@@ -222,15 +245,35 @@ public class SmokeTest implements ClientModInitializer {
         }
     }
 
+    /** What is on screen, for failure messages: the screen and its button labels. */
+    private static String describeScreen() {
+        try {
+            Screen screen = MinecraftClient.getInstance().currentScreen;
+            if (screen == null) {
+                return " (no screen open)";
+            }
+            StringBuilder out = new StringBuilder(" (screen: ").append(screen.getClass().getName()).append(", buttons:");
+            screen.children().forEach(e -> out.append(' ').append(key(e)));
+            return out.append(')').toString();
+        } catch (RuntimeException e) {
+            return " (screen unknown: " + e + ")";
+        }
+    }
+
     private static <T> T waitFor(String what, Supplier<T> supplier) throws InterruptedException {
-        long deadline = System.currentTimeMillis() + 600_000;
+        long deadline = System.currentTimeMillis() + 300_000;
         while (System.currentTimeMillis() < deadline) {
-            T value = supplier.get();
+            T value;
+            try {
+                value = supplier.get();
+            } catch (NullPointerException notReadyYet) {
+                value = null;
+            }
             if (value != null) {
                 return value;
             }
             Thread.sleep(500);
         }
-        throw new IllegalStateException("timed out waiting for " + what);
+        throw new IllegalStateException("timed out waiting for " + what + describeScreen());
     }
 }

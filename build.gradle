@@ -74,6 +74,8 @@ loom {
             source sourceSets.smoketest
             runDir 'run-smoketest'
             ideConfigGenerated false
+            // Mojang's launch profile asks for 2-4 GB and pre-touches it; the test needs far less.
+            vmArgs '-Xms256m', '-Xmx1536m', '-XX:-AlwaysPreTouch'
         }
     }
 }

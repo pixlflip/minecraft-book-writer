@@ -27,7 +27,8 @@ public final class Compat {
 
     @Nullable
     public static Screen currentScreen() {
-        return Minecraft.getInstance().gui.screen();
+        Minecraft client = Minecraft.getInstance();
+        return client == null || client.gui == null ? null : client.gui.screen();
     }
 
     public static ToastManager toastManager() {
@@ -36,6 +37,7 @@ public final class Compat {
 
     /** True while a loading overlay covers the game. */
     public static boolean overlayActive() {
-        return Minecraft.getInstance().gui.overlay() != null;
+        Minecraft client = Minecraft.getInstance();
+        return client == null || client.gui == null || client.gui.overlay() != null;
     }
 }
