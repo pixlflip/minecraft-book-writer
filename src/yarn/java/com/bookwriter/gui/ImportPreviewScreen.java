@@ -5,10 +5,11 @@ import com.bookwriter.text.BookPaginator;
 import com.bookwriter.text.ImportMode;
 import com.bookwriter.text.ImportPlanner;
 import com.bookwriter.text.TextCleaner;
+import com.bookwriter.compat.BaseScreen;
+import com.bookwriter.compat.Compat;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.ingame.BookEditScreen;
 import net.minecraft.client.gui.tooltip.Tooltip;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.CyclingButtonWidget;
@@ -26,9 +27,12 @@ import java.util.List;
  * Shows what an import will do to the book (how many pages, what gets replaced, what does not
  * fit) with a page-by-page preview, before anything is changed.
  */
-public class ImportPreviewScreen extends Screen {
-    private static final int PAGE_WIDTH = BookEditScreen.MAX_TEXT_WIDTH + 8;
-    private static final int PAGE_HEIGHT = BookEditScreen.MAX_TEXT_HEIGHT + 8;
+public class ImportPreviewScreen extends BaseScreen {
+    /** Text area of a book page, the same in every supported version. */
+    public static final int TEXT_WIDTH = 114;
+    public static final int TEXT_HEIGHT = 128;
+    private static final int PAGE_WIDTH = TEXT_WIDTH + 8;
+    private static final int PAGE_HEIGHT = TEXT_HEIGHT + 8;
     private static final int COLUMN_GAP = 10;
     private static final int COLUMN_WIDTH = 150;
     private static final int TOP = 34;
@@ -66,7 +70,7 @@ public class ImportPreviewScreen extends Screen {
 
     public static BookPaginator.LineWrapper lineWrapper(TextRenderer textRenderer) {
         return (text, consumer) -> textRenderer.getTextHandler()
-            .wrapLines(text, BookEditScreen.MAX_TEXT_WIDTH, Style.EMPTY, false, (style, start, end) -> consumer.accept(start, end));
+            .wrapLines(text, TEXT_WIDTH, Style.EMPTY, false, (style, start, end) -> consumer.accept(start, end));
     }
 
     private int left() {
@@ -77,9 +81,8 @@ public class ImportPreviewScreen extends Screen {
     protected void init() {
         int column = left() + PAGE_WIDTH + COLUMN_GAP;
 
-        this.addDrawableChild(CyclingButtonWidget.<ImportMode>builder(mode -> Text.translatable("bookwriter.mode." + mode.name().toLowerCase()))
+        this.addDrawableChild(Compat.<ImportMode>cycling(mode -> Text.translatable("bookwriter.mode." + mode.name().toLowerCase()), BookWriterMod.importMode)
             .values(ImportMode.values())
-            .initially(BookWriterMod.importMode)
             .tooltip(mode -> Tooltip.of(Text.translatable("bookwriter.mode." + mode.name().toLowerCase() + ".tooltip")))
             .build(column, TOP, COLUMN_WIDTH, 20, Text.translatable("bookwriter.mode"), (button, mode) -> {
                 BookWriterMod.importMode = mode;
@@ -110,7 +113,7 @@ public class ImportPreviewScreen extends Screen {
 
     private void recalculate() {
         this.cleanText = TextCleaner.clean(this.rawText, BookWriterMod.tidyText);
-        List<BookPaginator.Page> pages = BookPaginator.paginate(this.cleanText, lineWrapper(this.textRenderer));
+        List<BookPaginator.Page> pages = BookPaginator.paginate(this.cleanText, lineWrapper(this.textRenderer), Compat.PAGE_LENGTH);
         this.plan = ImportPlanner.plan(this.target.bookwriter$getPages(), this.target.bookwriter$getCurrentPage(), this.cleanText, pages, BookWriterMod.importMode);
         this.previewPage = Math.min(this.previewPage, Math.max(0, this.plan.importedPages() - 1));
         this.importButton.active = this.plan.importedPages() > 0;
@@ -171,7 +174,7 @@ public class ImportPreviewScreen extends Screen {
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+    protected boolean onKey(int keyCode, boolean ctrl, boolean shift, boolean alt) {
         switch (keyCode) {
             case GLFW.GLFW_KEY_ENTER, GLFW.GLFW_KEY_KP_ENTER -> {
                 // Enter on a focused button presses that button; otherwise it confirms.
@@ -179,6 +182,7 @@ public class ImportPreviewScreen extends Screen {
                     this.confirm();
                     return true;
                 }
+                return false;
             }
             case GLFW.GLFW_KEY_PAGE_UP -> {
                 this.flip(-1);
@@ -189,14 +193,13 @@ public class ImportPreviewScreen extends Screen {
                 return true;
             }
             default -> {
+                return false;
             }
         }
-        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float deltaTicks) {
-        super.render(context, mouseX, mouseY, deltaTicks);
+    protected void renderContent(DrawContext context, int mouseX, int mouseY, float deltaTicks) {
         int left = left();
         int column = left + PAGE_WIDTH + COLUMN_GAP;
 
@@ -210,7 +213,7 @@ public class ImportPreviewScreen extends Screen {
         if (this.plan.importedPages() > 0) {
             String page = this.plan.pages().get(this.plan.firstNewPage() + this.previewPage);
             int y = TOP + 4;
-            for (OrderedText line : this.textRenderer.wrapLines(Text.literal(page), BookEditScreen.MAX_TEXT_WIDTH)) {
+            for (OrderedText line : this.textRenderer.wrapLines(Text.literal(page), TEXT_WIDTH)) {
                 context.drawText(this.textRenderer, line, left + 4, y, INK, false);
                 y += this.textRenderer.fontHeight;
             }
@@ -220,8 +223,7 @@ public class ImportPreviewScreen extends Screen {
 
         int y = TOP + 52;
         for (Text line : this.summary) {
-            context.drawWrappedText(this.textRenderer, line, column, y, COLUMN_WIDTH, WHITE, true);
-            y += this.textRenderer.getWrappedLinesHeight(line, COLUMN_WIDTH) + 4;
+            y = this.drawWrapped(context, line, column, y, COLUMN_WIDTH, WHITE) + 4;
         }
     }
 }

@@ -1,9 +1,36 @@
+// Book Writer builds one jar per Minecraft version group.
+//
+//   ./gradlew build -Pmc=1.21.7      build for one Minecraft version
+//   ./build-all.sh                   build every supported group
+//
+// Each versions/<mc>.properties names the Minecraft version, its Yarn mappings (none for the
+// unobfuscated 26.x releases), the Java level, the version-specific source folder under
+// src/mc/, and the range of Minecraft versions the resulting jar declares support for.
+// Code that does not touch Minecraft (text cleaning, pagination, import planning, link
+// fetching) lives once in src/main and is shared by every build.
+
 plugins {
-    id 'fabric-loom' version '1.10-SNAPSHOT'
-    id 'maven-publish'
+    id 'net.fabricmc.fabric-loom' version "${loom_version}" apply false
 }
 
-version = project.mod_version
+def mc = findProperty('mc') ?: project.default_mc
+def versionFile = file("versions/${mc}.properties")
+if (!versionFile.exists()) {
+    throw new GradleException("No versions/${mc}.properties: Minecraft ${mc} is not a supported target")
+}
+def target = new Properties()
+versionFile.withInputStream { target.load(it) }
+
+def obfuscated = !target.getProperty('yarn_mappings', '').isBlank()
+def javaLevel = target.getProperty('java') as int
+def sourceGroup = target.getProperty('source')
+
+// Releases up to 1.21.11 ship obfuscated and are built against Yarn with remapping;
+// 26.1 onwards ship unobfuscated and need no mappings.
+apply plugin: obfuscated ? 'fabric-loom' : 'net.fabricmc.fabric-loom'
+apply plugin: 'java'
+
+version = "${project.mod_version}+${target.getProperty('label')}"
 group = project.maven_group
 
 base {
@@ -14,14 +41,66 @@ repositories {
     mavenCentral()
 }
 
-dependencies {
-    // To change the versions see the gradle.properties file
-    minecraft "com.mojang:minecraft:${project.minecraft_version}"
-    mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
-    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+sourceSets {
+    main {
+        // Screens shared by every Yarn-mapped release, then the version-specific mixin and shims.
+        // Screens: Yarn names up to 1.21.11, Mojang names from 26.1.
+        java.srcDir obfuscated ? "src/yarn/java" : "src/mojmap/java"
+        java.srcDir "src/mc/${sourceGroup}/java"
+    }
+    // A development-only mod that drives Book Writer in a real game; never packaged.
+    smoketest {
+        java.srcDir obfuscated ? 'src/smoketest/yarn/java' : 'src/smoketest/mojmap/java'
+        compileClasspath += main.compileClasspath + main.output
+        runtimeClasspath += main.runtimeClasspath + main.output
+    }
+}
 
-    // Fabric API
-    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+loom {
+    mods {
+        bookwriter {
+            sourceSet sourceSets.main
+        }
+        bookwriter_smoketest {
+            sourceSet sourceSets.smoketest
+        }
+    }
+    runs {
+        // ./gradlew runSmokeTest -Pmc=<version>: opens a book and quill in the real client,
+        // imports a long text through the mod, checks it and quits. Needs a display (xvfb in CI).
+        smokeTest {
+            client()
+            name = 'Smoke test'
+            source sourceSets.smoketest
+            runDir 'run-smoketest'
+            ideConfigGenerated false
+            // Mojang's launch profile asks for 2-4 GB and pre-touches it; the test needs far less.
+            vmArgs '-Xms256m', '-Xmx1536m', '-XX:-AlwaysPreTouch'
+        }
+    }
+}
+
+tasks.matching { it.name == 'runSmokeTest' }.configureEach {
+    doFirst {
+        // Skip the first-launch accessibility screen, which would replace the test's screens.
+        def runDir = file('run-smoketest')
+        runDir.mkdirs()
+        new File(runDir, 'options.txt').text = 'onboardAccessibility:false\n'
+    }
+}
+
+tasks.named('compileSmoketestJava') {
+    options.release = javaLevel
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${target.getProperty('minecraft_version')}"
+    if (obfuscated) {
+        mappings "net.fabricmc:yarn:${target.getProperty('yarn_mappings')}:v2"
+        modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    } else {
+        implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    }
 
     // HTML parsing for "Paste Link"; bundled inside the mod jar.
     include(implementation("org.jsoup:jsoup:${project.jsoup_version}"))
@@ -36,24 +115,29 @@ test {
 }
 
 processResources {
-    inputs.property "version", project.version
+    def props = [
+        version     : project.mod_version,
+        mc_range    : target.getProperty('mc_range'),
+        java        : javaLevel,
+        mixin_level : "JAVA_${javaLevel}",
+    ]
+    inputs.properties props
 
-    filesMatching("fabric.mod.json") {
-        expand "version": project.version
+    filesMatching(['fabric.mod.json', 'bookwriter.mixins.json']) {
+        expand props
     }
 }
 
 tasks.withType(JavaCompile).configureEach {
-    it.options.release = 21
+    it.options.release = javaLevel
+    it.options.encoding = 'UTF-8'
 }
 
+// Gradle itself runs on Java 25 (Loom requires it); --release makes the bytecode and the
+// usable JDK API match the Java version the target Minecraft runs on.
 java {
-    // Loom will automatically attach sourcesJar to a RemapSourcesJar task and to the "build" task
-    // if it is present.
-    withSourcesJar()
-
-    sourceCompatibility = JavaVersion.VERSION_21
-    targetCompatibility = JavaVersion.VERSION_21
+    sourceCompatibility = JavaVersion.toVersion(javaLevel)
+    targetCompatibility = JavaVersion.toVersion(javaLevel)
 }
 
 jar {
@@ -61,19 +145,5 @@ jar {
 
     from("LICENSE") {
         rename { "${it}_${project.base.archivesName.get()}" }
-    }
-}
-
-// configure the maven publication
-publishing {
-    publications {
-        create("mavenJava", MavenPublication) {
-            artifactId = project.archives_base_name
-            from components.java
-        }
-    }
-
-    repositories {
-        // Add repositories to publish to here.
     }
 }

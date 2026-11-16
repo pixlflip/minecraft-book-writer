@@ -4,19 +4,28 @@
   "version": "${version}",
   "name": "Book Writer",
   "description": "Import long text into a book and quill: paste from the clipboard or from a web link, with a preview, automatic page breaks, undo and continue-in-next-book.",
-  "authors": ["Jack"],
-  "contact": {},
+  "authors": [
+    "Jack"
+  ],
+  "contact": {
+    "homepage": "https://github.com/pixlflip/minecraft-book-writer",
+    "sources": "https://github.com/pixlflip/minecraft-book-writer",
+    "issues": "https://github.com/pixlflip/minecraft-book-writer/issues"
+  },
   "license": "MIT",
   "icon": "assets/bookwriter/icon.png",
   "environment": "client",
   "entrypoints": {
-    "client": ["com.bookwriter.BookWriterMod"]
+    "client": [
+      "com.bookwriter.BookWriterMod"
+    ]
   },
-  "mixins": ["bookwriter.mixins.json"],
+  "mixins": [
+    "bookwriter.mixins.json"
+  ],
   "depends": {
-    "fabricloader": ">=0.16.0",
-    "minecraft": "~1.21.7",
-    "java": ">=21",
-    "fabric-api": "*"
+    "fabricloader": ">=0.15.0",
+    "minecraft": "${mc_range}",
+    "java": ">=${java}"
   }
 }

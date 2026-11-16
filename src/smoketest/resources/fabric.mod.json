@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "id": "bookwriter_smoketest",
+  "version": "0",
+  "name": "Book Writer smoke test (development only)",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["com.bookwriter.smoketest.SmokeTest"]
+  },
+  "depends": {
+    "bookwriter": "*"
+  }
+}

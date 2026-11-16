@@ -3,7 +3,9 @@ package com.bookwriter.gui;
 import com.bookwriter.BookWriterMod;
 import com.bookwriter.web.LinkFetcher;
 import com.bookwriter.web.UrlResolver;
+import com.bookwriter.compat.BaseScreen;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.Element;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
@@ -15,7 +17,7 @@ import org.lwjgl.glfw.GLFW;
 import java.util.concurrent.CompletableFuture;
 
 /** Asks for a link, downloads it without freezing the game, and hands the text to the preview. */
-public class LinkScreen extends Screen {
+public class LinkScreen extends BaseScreen {
     private static final int FIELD_WIDTH = 300;
 
     private final Screen parent;
@@ -55,11 +57,12 @@ public class LinkScreen extends Screen {
         this.addDrawableChild(ButtonWidget.builder(ScreenTexts.CANCEL, button -> this.close())
             .dimensions(this.width / 2 + 2, y + 46, 100, 20).build());
         this.updateFetchButton();
+        this.applyInitialFocus();
     }
 
     @Override
-    protected void setInitialFocus() {
-        this.setInitialFocus(this.linkField);
+    protected Element initialFocus() {
+        return this.linkField;
     }
 
     private boolean fetching() {
@@ -114,17 +117,16 @@ public class LinkScreen extends Screen {
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+    protected boolean onKey(int keyCode, boolean ctrl, boolean shift, boolean alt) {
         if ((keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER) && this.linkField.isFocused()) {
             this.fetch();
             return true;
         }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return false;
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float deltaTicks) {
-        super.render(context, mouseX, mouseY, deltaTicks);
+    protected void renderContent(DrawContext context, int mouseX, int mouseY, float deltaTicks) {
         int y = this.height / 2 - 30;
         context.drawCenteredTextWithShadow(this.textRenderer, this.title, this.width / 2, y - 32, 0xFFFFFFFF);
         context.drawCenteredTextWithShadow(this.textRenderer, Text.translatable("bookwriter.link.hint"), this.width / 2, y - 14, 0xFFA0A0A0);
@@ -135,7 +137,7 @@ public class LinkScreen extends Screen {
         if (lines <= 1) {
             context.drawCenteredTextWithShadow(this.textRenderer, this.status, this.width / 2, y + 28, 0xFFFFFFFF);
         } else {
-            context.drawWrappedText(this.textRenderer, this.status, (this.width - width) / 2, y + 72, width, 0xFFFFFFFF, true);
+            this.drawWrapped(context, this.status, (this.width - width) / 2, y + 72, width, 0xFFFFFFFF);
         }
     }
 }
