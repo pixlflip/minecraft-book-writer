@@ -22,7 +22,7 @@ public abstract class BaseScreen extends Screen {
 
     @Override
     public boolean keyPressed(KeyInput input) {
-        if (this.onKey(input.key(), input.hasCtrlOrCmd(), input.hasShift(), input.hasAlt())) {
+        if (this.onKey(input.key(), input.hasCtrl(), input.hasShift(), input.hasAlt())) {
             return true;
         }
         return super.keyPressed(input);

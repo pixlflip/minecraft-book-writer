@@ -1,5 +1,6 @@
 package com.bookwriter.gui;
 
+import com.bookwriter.compat.Compat;
 import com.bookwriter.BookWriterMod;
 import com.bookwriter.web.LinkFetcher;
 import com.bookwriter.web.UrlResolver;
@@ -13,7 +14,7 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.ChatFormatting;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -90,7 +91,7 @@ public class LinkScreen extends BaseScreen {
             }
             this.request = null;
             if (error == null) {
-                this.minecraft.setScreen(new ImportPreviewScreen(this.parent, this.target, Component.literal(result.title()), result.text(), false));
+                Compat.setScreen(new ImportPreviewScreen(this.parent, this.target, Component.literal(result.title()), result.text(), false));
                 return;
             }
             Throwable cause = error.getCause() != null ? error.getCause() : error;
@@ -106,7 +107,7 @@ public class LinkScreen extends BaseScreen {
 
     @Override
     public void onClose() {
-        this.minecraft.setScreen(this.parent);
+        Compat.setScreen(this.parent);
     }
 
     @Override
@@ -119,7 +120,7 @@ public class LinkScreen extends BaseScreen {
 
     @Override
     protected boolean onKey(int keyCode, boolean ctrl, boolean shift, boolean alt) {
-        if ((keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER) && this.linkField.isFocused()) {
+        if ((keyCode == InputConstants.KEY_RETURN || keyCode == InputConstants.KEY_NUMPADENTER) && this.linkField.isFocused()) {
             this.fetch();
             return true;
         }

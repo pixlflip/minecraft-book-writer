@@ -1,5 +1,7 @@
 package com.bookwriter.gui;
 
+import com.mojang.blaze3d.platform.InputConstants;
+import com.bookwriter.compat.Compat;
 import com.bookwriter.BookWriterMod;
 import com.bookwriter.web.UrlResolver;
 import net.minecraft.client.Minecraft;
@@ -72,23 +74,23 @@ public final class BookPanel {
             Toasts.show(Component.translatable("bookwriter.toast.clipboard_empty"), Component.translatable("bookwriter.toast.clipboard_empty.hint"));
             return;
         }
-        client.setScreen(new ImportPreviewScreen(screen, target, Component.translatable("bookwriter.source.clipboard"), clipboard, false));
+        Compat.setScreen(new ImportPreviewScreen(screen, target, Component.translatable("bookwriter.source.clipboard"), clipboard, false));
     }
 
     public static void pasteLink(Screen screen, BookImportTarget target) {
         Minecraft client = Minecraft.getInstance();
         String clipboard = client.keyboardHandler.getClipboard();
         String link = UrlResolver.looksLikeUrl(clipboard) ? clipboard.trim() : "";
-        client.setScreen(new LinkScreen(screen, target, link));
+        Compat.setScreen(new LinkScreen(screen, target, link));
     }
 
     public static void continueImport(Screen screen, BookImportTarget target) {
-        Minecraft.getInstance().setScreen(new ImportPreviewScreen(screen, target,
+        Compat.setScreen(new ImportPreviewScreen(screen, target,
             Component.translatable("bookwriter.source.continued"), BookWriterMod.pendingText, true));
     }
 
     /** Ctrl+Shift+V (Cmd+Shift+V on macOS) imports the clipboard; plain Ctrl+V still pastes into the page. */
     public static boolean isImportShortcut(int keyCode, boolean ctrl, boolean shift, boolean alt) {
-        return keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_V && ctrl && shift && !alt;
+        return keyCode == InputConstants.KEY_V && ctrl && shift && !alt;
     }
 }

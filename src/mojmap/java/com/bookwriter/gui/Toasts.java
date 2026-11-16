@@ -1,5 +1,6 @@
 package com.bookwriter.gui;
 
+import com.bookwriter.compat.Compat;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.toasts.SystemToast;
 import net.minecraft.network.chat.MutableComponent;
@@ -18,6 +19,6 @@ public final class Toasts {
     public static void show(Component title, @Nullable Component description) {
         Minecraft client = Minecraft.getInstance();
         // show() updates a toast that is still on screen instead of stacking a second one.
-        SystemToast.addOrUpdate(client.getToastManager(), SystemToast.SystemToastId.PERIODIC_NOTIFICATION, title, description);
+        SystemToast.addOrUpdate(Compat.toastManager(), SystemToast.SystemToastId.PERIODIC_NOTIFICATION, title, description);
     }
 }

@@ -63,7 +63,7 @@ public abstract class BookEditScreenMixin extends Screen implements BookImportTa
 
     @Inject(method = "keyPressed", at = @At("HEAD"), cancellable = true)
     private void bookwriter$shortcut(KeyInput input, CallbackInfoReturnable<Boolean> cir) {
-        if (BookPanel.isImportShortcut(input.key(), input.hasCtrlOrCmd(), input.hasShift(), input.hasAlt())) {
+        if (BookPanel.isImportShortcut(input.key(), input.hasCtrl(), input.hasShift(), input.hasAlt())) {
             BookPanel.pasteText(this, this);
             cir.setReturnValue(true);
         }

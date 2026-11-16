@@ -14,6 +14,6 @@ public final class Compat {
     }
 
     public static <T> CyclingButtonWidget.Builder<T> cycling(Function<T, Text> names, T initial) {
-        return CyclingButtonWidget.builder(names, initial);
+        return CyclingButtonWidget.builder(names).initially(initial);
     }
 }

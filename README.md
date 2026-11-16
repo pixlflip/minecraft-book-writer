@@ -117,11 +117,12 @@ How the code is laid out:
 
 - `src/main`: everything that does not touch Minecraft (cleaning, pagination, import planning,
   link fetching) and the resources. Shared by every version.
-- `src/yarn`: the screens, for 1.20 – 1.21.11 (Yarn names).
+- `src/yarn`: the screens for 1.20 – 1.21.11 (Yarn names).
+- `src/mojmap`: the same screens for 26.x, which ships with Mojang's own names.
 - `src/mc/<group>`: the book screen mixin and small compatibility shims for each group of
   versions whose APIs match: `y20` (1.20 – 1.20.1), `y20_2` (1.20.2 – 1.21.5), `y21_6`
-  (1.21.6 – 1.21.8), `y21_9` (1.21.9 – 1.21.11) and `m26` (26.x, which ships with Mojang's own
-  names and has its own copy of the screens).
+  (1.21.6 – 1.21.8), `y21_9` (1.21.9 – 1.21.10), `y21_11` (1.21.11), `m26` (26.1.x) and
+  `m26_2` (26.2 – 26.3).
 - `versions/<mc>.properties`: which mappings, Java version and source group each Minecraft
   version uses. Adding a version is usually just adding a file here.
 

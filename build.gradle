@@ -44,9 +44,8 @@ repositories {
 sourceSets {
     main {
         // Screens shared by every Yarn-mapped release, then the version-specific mixin and shims.
-        if (obfuscated) {
-            java.srcDir "src/yarn/java"
-        }
+        // Screens: Yarn names up to 1.21.11, Mojang names from 26.1.
+        java.srcDir obfuscated ? "src/yarn/java" : "src/mojmap/java"
         java.srcDir "src/mc/${sourceGroup}/java"
     }
     // A development-only mod that drives Book Writer in a real game; never packaged.

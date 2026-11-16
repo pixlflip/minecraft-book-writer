@@ -20,7 +20,7 @@ import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.network.chat.Style;
 import net.minecraft.network.chat.Component;
 import net.minecraft.ChatFormatting;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -167,18 +167,18 @@ public class ImportPreviewScreen extends BaseScreen {
             }
             Toasts.show(Toasts.counted("bookwriter.toast.imported", this.plan.importedPages()), Component.translatable("bookwriter.toast.undo_hint"));
         }
-        this.minecraft.setScreen(this.parent);
+        Compat.setScreen(this.parent);
     }
 
     @Override
     public void onClose() {
-        this.minecraft.setScreen(this.parent);
+        Compat.setScreen(this.parent);
     }
 
     @Override
     protected boolean onKey(int keyCode, boolean ctrl, boolean shift, boolean alt) {
         switch (keyCode) {
-            case GLFW.GLFW_KEY_ENTER, GLFW.GLFW_KEY_KP_ENTER -> {
+            case InputConstants.KEY_RETURN, InputConstants.KEY_NUMPADENTER -> {
                 // Enter on a focused button presses that button; otherwise it confirms.
                 if (!(this.getFocused() instanceof Button) && this.importButton.active) {
                     this.confirm();
@@ -186,11 +186,11 @@ public class ImportPreviewScreen extends BaseScreen {
                 }
                 return false;
             }
-            case GLFW.GLFW_KEY_PAGE_UP -> {
+            case InputConstants.KEY_PAGEUP -> {
                 this.flip(-1);
                 return true;
             }
-            case GLFW.GLFW_KEY_PAGE_DOWN -> {
+            case InputConstants.KEY_PAGEDOWN -> {
                 this.flip(1);
                 return true;
             }

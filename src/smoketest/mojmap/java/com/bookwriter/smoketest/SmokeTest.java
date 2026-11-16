@@ -40,17 +40,17 @@ public class SmokeTest implements ClientModInitializer {
         try {
             Minecraft client = waitFor("the game to load", () -> {
                 Minecraft c = Minecraft.getInstance();
-                return c != null && c.getOverlay() == null && c.screen != null ? c : null;
+                return c != null && !Compat.overlayActive() && Compat.currentScreen() != null ? c : null;
             });
             pause();
 
             // Create a world through the normal Create New World screen.
             onClient(client, () -> openCreateWorld(client));
             // It loads the default data packs first, then appears.
-            waitFor("the create world screen", () -> client.screen instanceof CreateWorldScreen ? Boolean.TRUE : null);
+            waitFor("the create world screen", () -> Compat.currentScreen() instanceof CreateWorldScreen ? Boolean.TRUE : null);
             pause();
-            onClient(client, () -> press(button(client.screen, "selectWorld.create")));
-            waitFor("the world to load", () -> client.player != null && client.level != null && client.screen == null ? Boolean.TRUE : null);
+            onClient(client, () -> press(button(Compat.currentScreen(), "selectWorld.create")));
+            waitFor("the world to load", () -> client.player != null && client.level != null && Compat.currentScreen() == null ? Boolean.TRUE : null);
             pause();
 
             // A book and quill in every hotbar slot, given by the server so it is really there.
@@ -75,19 +75,19 @@ public class SmokeTest implements ClientModInitializer {
             pause();
 
             onClient(client, () -> {
-                check(client.screen == book[0], "book screen did not open: " + client.screen);
+                check(Compat.currentScreen() == book[0], "book screen did not open: " + Compat.currentScreen());
                 check(book[0] instanceof BookImportTarget, "mixin was not applied to BookEditScreen");
                 long ours = book[0].children().stream().filter(e -> key(e).startsWith("bookwriter.")).count();
                 check(ours >= 3, "expected the Book Writer buttons, found " + ours);
                 press(button(book[0], "bookwriter.button.paste"));
-                check(client.screen instanceof ImportPreviewScreen, "Paste Text did not open the preview: " + client.screen);
+                check(Compat.currentScreen() instanceof ImportPreviewScreen, "Paste Text did not open the preview: " + Compat.currentScreen());
             });
             pause();
 
             int[] imported = new int[1];
             onClient(client, () -> {
-                press(button(client.screen, "bookwriter.preview.import"));
-                check(client.screen == book[0], "Import did not return to the book: " + client.screen);
+                press(button(Compat.currentScreen(), "bookwriter.preview.import"));
+                check(Compat.currentScreen() == book[0], "Import did not return to the book: " + Compat.currentScreen());
                 List<String> pages = ((BookImportTarget) book[0]).bookwriter$getPages();
                 imported[0] = pages.size();
                 check(imported[0] > 5, "expected many imported pages, found " + imported[0]);
@@ -111,7 +111,7 @@ public class SmokeTest implements ClientModInitializer {
             pause();
 
             onClient(client, () -> {
-                client.setScreen(null);
+                Compat.setScreen(null);
                 System.out.println("BOOKWRITER SMOKETEST PASS");
                 client.stop();
             });
@@ -138,7 +138,7 @@ public class SmokeTest implements ClientModInitializer {
                     args[3] = componentGetter().invoke(stack, type);
                 }
                 Screen screen = (Screen) constructor.newInstance(args);
-                client.setScreen(screen);
+                Compat.setScreen(screen);
                 return screen;
             }
         } catch (ReflectiveOperationException e) {
@@ -158,13 +158,13 @@ public class SmokeTest implements ClientModInitializer {
 
     /** CreateWorldScreen.create(client, parent) or .show(client, Runnable), depending on version. */
     private static void openCreateWorld(Minecraft client) {
-        Screen parent = client.screen;
+        Screen parent = Compat.currentScreen();
         try {
             for (Method m : CreateWorldScreen.class.getMethods()) {
                 Class<?>[] p = m.getParameterTypes();
                 if (Modifier.isStatic(m.getModifiers()) && p.length == 2 && p[0] == Minecraft.class
                     && (p[1] == Runnable.class || p[1] == Screen.class)) {
-                    Runnable back = () -> client.setScreen(parent);
+                    Runnable back = () -> Compat.setScreen(parent);
                     m.invoke(null, client, p[1] == Runnable.class ? back : parent);
                     return;
                 }
