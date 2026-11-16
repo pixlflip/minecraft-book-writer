@@ -54,10 +54,18 @@ jobs:
           fi
       - name: Smoke test in the real game (Minecraft ${{ matrix.mc }})
         run: |
-          sudo apt-get update -qq && sudo apt-get install -y -qq xvfb mesa-utils > /dev/null
-          set -o pipefail
-          xvfb-run -a -s "-screen 0 1280x800x24" ./gradlew runSmokeTest -Pmc=${{ matrix.mc }} --no-daemon | tee smoketest.log
-          grep -q "BOOKWRITER SMOKETEST PASS" smoketest.log
+          sudo apt-get update -qq && sudo apt-get install -y -qq xvfb mesa-utils libgl1-mesa-dri > /dev/null
+          # Software OpenGL on a virtual display. Creating the GL window is occasionally flaky on
+          # hosted runners, so a run that never reaches the title screen is retried once.
+          export LIBGL_ALWAYS_SOFTWARE=1
+          for attempt in 1 2; do
+            xvfb-run -a -s "-screen 0 1280x800x24 +extension GLX +render" ./gradlew runSmokeTest -Pmc=${{ matrix.mc }} --no-daemon > smoketest.log 2>&1 || true
+            grep "BOOKWRITER SMOKETEST" smoketest.log || true
+            grep -q "BOOKWRITER SMOKETEST PASS" smoketest.log && exit 0
+            grep -q "waiting for the game to load" smoketest.log || break
+          done
+          tail -n 80 smoketest.log
+          exit 1
       - uses: actions/upload-artifact@v7
         with:
           name: bookwriter-mc${{ matrix.mc }}
