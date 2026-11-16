@@ -1,8 +1,10 @@
 {
   "required": true,
   "package": "com.bookwriter.mixin",
-  "compatibilityLevel": "JAVA_21",
-  "client": ["BookEditScreenMixin"],
+  "compatibilityLevel": "${mixin_level}",
+  "client": [
+    "BookEditScreenMixin"
+  ],
   "injectors": {
     "defaultRequire": 1
   }

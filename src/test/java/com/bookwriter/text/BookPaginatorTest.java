@@ -80,6 +80,21 @@ class BookPaginatorTest {
         assertEquals(List.of(text), texts(pages));
     }
 
+    /** Before 1.21.6 the editor refuses pages of 1024 characters, so those builds paginate at 1023. */
+    @Test
+    void honoursALowerPageLengthLimit() {
+        String text = "x".repeat(5000);
+        BookPaginator.LineWrapper wrapper = wrapper(100000, true);
+        List<BookPaginator.Page> pages = BookPaginator.paginate(text, wrapper, 1023);
+        assertTrue(pages.size() >= 5);
+        int total = 0;
+        for (BookPaginator.Page page : pages) {
+            assertTrue(page.text().length() <= 1023, "page too long: " + page.text().length());
+            total += page.text().length();
+        }
+        assertTrue(total == text.length(), "characters lost or duplicated");
+    }
+
     @Test
     void everyPageFitsTheGameLimits() {
         StringBuilder text = new StringBuilder();

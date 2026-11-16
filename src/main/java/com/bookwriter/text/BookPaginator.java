@@ -49,6 +49,14 @@ public final class BookPaginator {
 
     /** Paginates {@code text} into as many pages as it needs; the caller applies the book limit. */
     public static List<Page> paginate(String text, LineWrapper wrapper) {
+        return paginate(text, wrapper, MAX_PAGE_LENGTH);
+    }
+
+    /**
+     * As {@link #paginate(String, LineWrapper)}, with a different per-page character limit.
+     * Before 1.21.6 the book editor only accepts pages shorter than 1024 characters.
+     */
+    public static List<Page> paginate(String text, LineWrapper wrapper, int maxPageLength) {
         List<Page> pages = new ArrayList<>();
         if (text == null || text.isEmpty()) {
             return pages;
@@ -58,12 +66,12 @@ public final class BookPaginator {
         while (offset < text.length()) {
             // Normally a single pass. We only come round again after force-splitting a "line"
             // that is longer than a whole page (possible only with zero-width characters).
-            offset = paginateFrom(text, offset, wrapper, pages);
+            offset = paginateFrom(text, offset, wrapper, pages, maxPageLength);
         }
         return pages;
     }
 
-    private static int paginateFrom(String text, int offset, LineWrapper wrapper, List<Page> pages) {
+    private static int paginateFrom(String text, int offset, LineWrapper wrapper, List<Page> pages, int maxPageLength) {
         String rest = text.substring(offset);
         List<int[]> lines = new ArrayList<>();
         wrapper.wrap(rest, (start, end) -> lines.add(new int[] {start, end}));
@@ -81,13 +89,13 @@ public final class BookPaginator {
             int first = i;
             int pageStart = lines.get(first)[0];
             int last = -1;
-            while (i < lines.size() && i - first < MAX_LINES_PER_PAGE && lines.get(i)[1] - pageStart <= MAX_PAGE_LENGTH) {
+            while (i < lines.size() && i - first < MAX_LINES_PER_PAGE && lines.get(i)[1] - pageStart <= maxPageLength) {
                 last = i++;
             }
 
             if (last < 0) {
                 // Even one line is over the character limit: cut it and re-wrap what is left.
-                int cut = pageStart + MAX_PAGE_LENGTH;
+                int cut = pageStart + maxPageLength;
                 if (Character.isHighSurrogate(rest.charAt(cut - 1))) {
                     cut--;
                 }

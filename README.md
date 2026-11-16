@@ -4,8 +4,8 @@ Import long text into a Minecraft book and quill. Paste from your clipboard or s
 web link, check the result in a preview, and Book Writer spreads it over as many pages as it
 needs.
 
-A client-side [Fabric](https://fabricmc.net/) mod for Minecraft 1.21.7. Works in singleplayer
-and on servers; the server does not need it.
+A client-side [Fabric](https://fabricmc.net/) mod for **Minecraft 1.20 through 26.3**. Works in
+singleplayer and on servers; the server does not need it.
 
 ![A book and quill with the Paste Text, Paste Link and Undo Import buttons beside it](docs/images/book.png)
 
@@ -22,10 +22,26 @@ and on servers; the server does not need it.
 
 ## Installing
 
-1. Install [Fabric Loader](https://fabricmc.net/use/) for Minecraft 1.21.7.
-2. Put [Fabric API](https://modrinth.com/mod/fabric-api) in your `mods` folder.
-3. Put the Book Writer jar in your `mods` folder. Get it from this repository's Releases
-   page if a release is published there, or [build it yourself](#building).
+1. Install [Fabric Loader](https://fabricmc.net/use/) for your Minecraft version.
+2. Download the Book Writer jar for **your exact Minecraft version** from the
+   [latest release](https://github.com/pixlflip/minecraft-book-writer/releases/latest). The file
+   name ends in your version, for example `bookwriter-1.1.0+mc1.21.11.jar` for 1.21.11.
+3. Put it in your `mods` folder.
+
+Fabric API is not needed. Each jar only loads on the Minecraft version in its name, so if the
+game says Book Writer is incompatible, check that you picked the matching file.
+
+### Supported versions
+
+| Minecraft | Jar |
+| --- | --- |
+| 26.1, 26.1.1, 26.1.2, 26.2, 26.3 | one jar per version |
+| 1.21 – 1.21.11 | one jar per version |
+| 1.20 – 1.20.6 | one jar per version |
+
+Older versions are not supported: the book screen and the rendering API they use are too
+different. On versions before 1.21.6 a page holds at most 1,023 characters (the game's own
+limit there), one fewer than on newer versions.
 
 ## Using it
 
@@ -88,13 +104,30 @@ link. Book Writer does not send your links or text anywhere else.
 
 ## Building
 
-Requires Java 21.
+Requires Java 25 to run the build. Every Minecraft version is built from the same source:
 
 ```bash
-./gradlew build
+./gradlew build -Pmc=1.21.11     # one Minecraft version
+./build-all.sh                   # every supported version
 ```
 
-The mod jar is written to `build/libs/`.
+The mod jar is written to `build/libs/` (`build-all.sh` collects them all in `dist/`).
+
+How the code is laid out:
+
+- `src/main`: everything that does not touch Minecraft (cleaning, pagination, import planning,
+  link fetching) and the resources. Shared by every version.
+- `src/yarn`: the screens, for 1.20 – 1.21.11 (Yarn names).
+- `src/mc/<group>`: the book screen mixin and small compatibility shims for each group of
+  versions whose APIs match: `y20` (1.20 – 1.20.1), `y20_2` (1.20.2 – 1.21.5), `y21_6`
+  (1.21.6 – 1.21.8), `y21_9` (1.21.9 – 1.21.11) and `m26` (26.x, which ships with Mojang's own
+  names and has its own copy of the screens).
+- `versions/<mc>.properties`: which mappings, Java version and source group each Minecraft
+  version uses. Adding a version is usually just adding a file here.
+
+`./gradlew runSmokeTest -Pmc=<version>` starts the real game with a development-only test mod
+that opens a book and quill, imports a long text through Book Writer and checks the result.
+It needs a display; CI runs it under Xvfb for every version.
 
 ## License
 
